@@ -9,12 +9,27 @@ const app = express();
 app.use(express.json());
 
 // Route for Slack Events API
+// Route for Slack Events API
 app.post('/slack/events', async (req, res) => {
-    // Verify Slack request signature here for security (optional)
+    console.log("Incoming Slack Event:", JSON.stringify(req.body, null, 2)); // Log the incoming request body
+
     const slackRequest = req.body;
-    slackApp.processEvent(slackRequest);
-    res.sendStatus(200); // Respond back to Slack that the event was received
+
+    // Check if the event property exists
+    if (!slackRequest || !slackRequest.event) {
+        console.error("Invalid Slack event payload");
+        return res.status(400).send('Invalid request payload');
+    }
+
+    try {
+        await slackApp.processEvent(slackRequest); // Process the event
+        res.sendStatus(200); // Respond back to Slack that the event was received
+    } catch (error) {
+        console.error("Error processing Slack event:", error);
+        res.status(500).send('Error processing event');
+    }
 });
+
 
 // Serve a basic HTML page at the root
 app.get('/', (req, res) => {
@@ -23,7 +38,7 @@ app.get('/', (req, res) => {
 
 // Route to initiate OAuth flow for Slack
 app.get('/install', (req, res) => {
-    const installUrl = https://slack.com/oauth/v2/authorize?client_id=${process.env.SLACK_CLIENT_ID}&scope=channels:history,channels:read,chat:write,chat:write.customize,chat:write.public,commands,groups:history,groups:read,im:history,im:read,im:write,mpim:history,mpim:read,reactions:write,mpim:write,mpim:write.topic&user_scope=chat:write,users:read;
+    const installUrl = `https://slack.com/oauth/v2/authorize?client_id=${process.env.SLACK_CLIENT_ID}&scope=channels:history,channels:read,chat:write,chat:write.customize,chat:write.public,commands,groups:history,groups:read,im:history,im:read,im:write,mpim:history,mpim:read,reactions:write,mpim:write,mpim:write.topic&user_scope=chat:write,users:read`;
     res.redirect(installUrl); // Redirect to Slack OAuth page
 });
 
@@ -53,14 +68,8 @@ app.get('/slack/oauth_redirect', async (req, res) => {
     }
 });
 
-// Start the Slack Bolt app
-(async () => {
-    await slackApp.start(process.env.PORT || 3002);
-    console.log('⚡️ Slack Bolt app is running!');
-})();
-
 // Start the Express server
 const PORT = 3002;
 app.listen(PORT, () => {
-    console.log(Express server is runningg on http://localhost:${PORT});
+    console.log(`Express server is running on http://localhost:${PORT}`);
 });
